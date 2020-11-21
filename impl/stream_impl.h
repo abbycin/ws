@@ -23,7 +23,8 @@ namespace ws
 
       void close(std::error_code& ec) { sock.next_layer().close(ec); }
 
-      asio::io_context& context() { return sock.next_layer().get_io_context(); }
+      // FIXME: remove cast
+      asio::io_context& context() { return static_cast<asio::io_context&>(sock.next_layer().get_executor().context()); }
 
       void shutdown_wr()
       {
@@ -42,7 +43,8 @@ namespace ws
 
       void close(std::error_code& ec) { sock.close(ec); }
 
-      asio::io_context& context() { return sock.get_io_context(); }
+      // FIXME: remove cast
+      asio::io_context& context() { return static_cast<asio::io_context&>(sock.get_executor().context()); }
 
       void shutdown_wr()
       {
@@ -67,7 +69,7 @@ namespace ws
     template<typename... Args>
     explicit impl(Args&&... args)
         : msg_type_{NONE}, status_{CLOSED}, fragment_size_{kFragmentSize}, max_msg_size_{kMaxMsgSize},
-          socket_{std::forward<Args>(args)...}, wrapper_{socket_}, timer_{socket_.get_io_context()},
+          socket_{std::forward<Args>(args)...}, wrapper_{socket_}, timer_{socket_.get_executor()},
           last_error_{}, ping_msg_{}, ping_interval_{},
           last_heartbeat_{}, frame_{}, header_{}, rd_buf_{kMaxMsgSize}, ctrl_{}, payload_{kMaxFrameSize}, wr_buf_{}
     {
@@ -238,6 +240,8 @@ namespace ws
       }
     }
 
+    asio::io_context& context() { return wrapper_.context(); }
+
     void force_close()
     {
       if(status_ != CLOSED)
@@ -361,8 +365,7 @@ namespace ws
       }
     }
 
-    void build_write_buffer(detail::Message& out, bool fin, detail::opcode code, size_t payload_size,
-                              const Buffer& buf)
+    void build_write_buffer(detail::Message& out, bool fin, detail::opcode code, size_t payload_size, const Buffer& buf)
     {
       detail::WsFrame f{};
       if(fin)
@@ -733,8 +736,7 @@ namespace ws
 
   template<typename NextLayer>
   template<typename... Args>
-  stream<NextLayer>::stream(Args&&... args)
-      : layer_{}
+  stream<NextLayer>::stream(Args&&... args) : layer_{}
   {
     layer_ = impl::create(std::forward<Args>(args)...);
   }
@@ -879,6 +881,12 @@ namespace ws
   void stream<NextLayer>::write_binary(const Buffer& buf, SendCallback cb)
   {
     layer_->write_binary(buf, cb);
+  }
+
+  template<typename NextLayer>
+  asio::io_context& stream<NextLayer>::context()
+  {
+    return layer_->context();
   }
 }
 

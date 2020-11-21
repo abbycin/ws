@@ -38,14 +38,14 @@ public:
       if(ec)
       {
         std::cerr << "websocket connect: " << ec.message() << '\n';
-        sock_.next_layer().get_io_context().stop();
+        sock_.context().stop();
       }
       else
       {
         this->do_write();
       }
     });
-    sock_.next_layer().get_io_context().run();
+    sock_.context().run();
   }
 
 private:

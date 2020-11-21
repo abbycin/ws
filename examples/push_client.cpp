@@ -35,7 +35,7 @@ public:
           if(ec)
           {
             std::cerr << "handshake: " << ec.message() << '\n';
-            sock_.next_layer().get_io_context().stop();
+            sock_.context().stop();
           }
           else
           {

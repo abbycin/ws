@@ -74,6 +74,8 @@ namespace ws
 
     void write_binary(const Buffer& buf, SendCallback cb);
 
+    asio::io_context& context();
+
   private:
     class impl;
     std::shared_ptr<impl> layer_;
